@@ -1,24 +1,50 @@
-import logo from './logo.svg';
-import './App.css';
+import React, {useEffect} from 'react';
+import { useKeycloak } from '@react-keycloak/web';
+import Login from './Login';
+import Home from './Home';
+import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
+import { addUserToDatabase } from './userService';
+import AddEvent from './AddEvent';
 
-function App() {
+const App = () => {
+  const { keycloak, initialized } = useKeycloak();
+
+  useEffect(() => {
+    if(keycloak.authenticated){
+        addUserToDatabase(keycloak)
+        .then(result => {
+          if (result.userAdded) {
+              console.log('User was added to database:', result.data);
+          } else {
+              console.log('User already exists in database:', result.data);
+          }
+      })
+      .catch(error => {
+          console.error('Error:', error.message);
+      });
+    }
+}, [keycloak, keycloak.authenticated])
+
+  if (!initialized) {
+    return null; 
+  }
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route 
+        path='/login'
+        element={keycloak.authenticated ? <Navigate replace to="/" /> : <Login />}
+        />
+        <Route 
+        path='/'
+        element={keycloak.authenticated ? <Home/> : <Navigate to="login" />}
+        />
+        <Route
+        path='/events/add'
+        element={<AddEvent/>}
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
